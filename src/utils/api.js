@@ -4,7 +4,14 @@
 // user message, an optional saved model number, and the prior conversation
 // history. It responds with the shape documented in API_RESPONSE_SHAPE below.
 
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:8000";
+// Local dev hits :8000; on Vercel the backend service is mounted at /_/backend
+// (see vercel.json). Override any time with REACT_APP_API_BASE.
+const API_BASE =
+  process.env.REACT_APP_API_BASE ||
+  (window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+    ? "http://localhost:8000"
+    : "/_/backend");
 
 // Hard ceiling on a single chat request. A turn that needs a live web scrape
 // (e.g. an unindexed part number) is the slow path; anything beyond this is
