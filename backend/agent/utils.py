@@ -36,7 +36,6 @@ ORDER_CART_RE = re.compile(
     r"checkout|check\s+out|get\s+(this|that)\s+part|order\s+(this|that)\b",
     re.IGNORECASE,
 )
-ORDER_VERB_RE = re.compile(r"\b(order|buy|purchase)\b", re.IGNORECASE)
 # A message that is essentially the user supplying their appliance model number.
 # Two phrasings: model-last ("my model is WRF535SWHZ") and model-first
 # ("WRF535SWHZ is my model" / "MFI2568AES this is my model").
@@ -121,21 +120,6 @@ NEW_TOPIC_RE = re.compile(
     r"what\s+about|how\s+about)\b",
     re.IGNORECASE,
 )
-# Clear "I want to buy/find this" phrasing — no need to ask what they want.
-BUY_SIGNAL_RE = re.compile(
-    r"\b(want|need|looking\s+for|buy|purchase|get\s+(a|an|the|some)|"
-    r"show\s+me|find\b|search|browse|"
-    r"suggest\s+me\s+parts?|parts?\s+for|for\s+(my|this)\b.*\bmodel)\b",
-    re.IGNORECASE,
-)
-# Too vague to be a product/topic name — don't offer intent chips.
-_NON_PRODUCT_TOPIC_RE = re.compile(
-    r"^\s*(help|info|information|question|something|anything|part|parts|"
-    r"problem|issue|broken)\s*$",
-    re.IGNORECASE,
-)
-
-
 def extract_part_number(text: str) -> str | None:
     m = PART_RE.search(text or "")
     return m.group(1).upper() if m else None
@@ -334,50 +318,6 @@ def topic_from_message(message: str) -> str:
     return re.sub(r"\s+", " ", topic).strip(" ,.-")
 
 
-def needs_intent_clarify(
-    message: str,
-    part_number: str | None,
-    model_number: str | None = None,
-) -> bool:
-    """True when the user named a part/topic but gave no clear action
-    (buy vs fix vs compatibility). Only used as a fallback — clear verbs,
-    symptoms, or an in-message model number route directly without asking."""
-    if part_number:
-        return False
-    text = message or ""
-    # If a model is known (stated now or saved earlier), we have enough context
-    # to just search for the part and flag what fits — don't interrupt with the
-    # buy/fix/compat chips. Those are only useful for cold, context-free queries.
-    if model_number:
-        return False
-    if any(
-        rx.search(text)
-        for rx in (
-            ORDER_STATUS_RE,
-            ORDER_PLACEMENT_RE,
-            COMPAT_RE,
-            INSTALL_RE,
-            REPAIR_RE,
-            GREETING_RE,
-            THANKS_RE,
-        )
-    ):
-        return False
-    if (
-        is_model_statement(text)
-        or contains_sensitive_data(text)
-        or is_meta_or_injection(text)
-        or is_out_of_scope(text)
-        or BUY_SIGNAL_RE.search(text)
-        or is_followup_reference(text)
-    ):
-        return False
-    topic = topic_from_message(text)
-    if len(topic) < 3 or _NON_PRODUCT_TOPIC_RE.match(topic):
-        return False
-    return True
-
-
 def build_intent_options(topic: str, model_number: str = "") -> list[dict]:
     """Clickable action choices when intent is ambiguous."""
     topic = (topic or "this part").strip()
@@ -406,23 +346,6 @@ def build_intent_options(topic: str, model_number: str = "") -> list[dict]:
             "message": compat_msg,
         },
     ]
-
-
-def is_order_placement_intent(message: str, part_number: str | None) -> bool:
-    """True only when the user wants to check out a *specific* known part.
-
-    'I want to purchase Temperature Sensor' is a part search, not checkout.
-    'Buy PS11752778' or 'add this to cart' (after a part was discussed) is."""
-    text = message or ""
-    if not part_number:
-        return False
-    if ORDER_CART_RE.search(text):
-        return True
-    if ORDER_VERB_RE.search(text) and (
-        extract_part_number(text) or is_followup_reference(text)
-    ):
-        return True
-    return False
 
 
 def is_model_statement(message: str) -> bool:
@@ -565,50 +488,6 @@ def unambiguous_intent(message: str, part_number: str | None) -> str | None:
     if is_bare_part_number(message, part_number):
         return "lookup_part"
     return None
-
-
-def classify_intent(
-    message: str,
-    part_number: str | None,
-    model_number: str | None,
-) -> str:
-    """Rule-based intent classification (fast, deterministic).
-
-    Retained as the fallback path when the Flash classifier is unavailable.
-    """
-    # Safety first: never process payment/credential data.
-    if contains_sensitive_data(message):
-        return "sensitive"
-    # Prompt-injection / meta questions -> politely refuse & redirect to scope.
-    if is_meta_or_injection(message):
-        return "out_of_scope"
-    if is_out_of_scope(message):
-        return "out_of_scope"
-    # Greetings / thanks -> friendly conversational reply, no search.
-    if GREETING_RE.match(message or "") or THANKS_RE.match(message or ""):
-        return "greeting"
-    # User just stating their model number -> acknowledge, don't search.
-    if is_model_statement(message):
-        return "provide_model"
-    if ORDER_STATUS_RE.search(message):
-        return "order_status"
-    if is_order_placement_intent(message, part_number):
-        return "order_placement"
-    # Compatibility: trigger on a part + compat language even without a model
-    # (the executor will ask for the model if it's missing).
-    if COMPAT_RE.search(message) and part_number:
-        return "compatibility"
-    if INSTALL_RE.search(message) and part_number:
-        return "install_help"
-    if needs_intent_clarify(message, part_number, model_number):
-        return "intent_clarify"
-    if part_number and not REPAIR_RE.search(message):
-        return "lookup_part"
-    if REPAIR_RE.search(message):
-        return "repair_guide"
-    if part_number:
-        return "lookup_part"
-    return "search"
 
 
 def parse_json_field(value: Any, default=None):
