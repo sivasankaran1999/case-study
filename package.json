@@ -14,14 +14,17 @@
     "framer-motion": "^10.16.4",
     "fs": "^0.0.1-security",
     "langchain": "^0.0.143",
+    "lucide-react": "^1.17.0",
     "marked": "^9.1.2",
     "mui": "^0.0.1",
     "pdf-parse": "^1.1.1",
     "react": "^18.2.0",
     "react-chat-elements": "^12.0.10",
     "react-dom": "^18.2.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^6.15.0",
     "react-scripts": "5.0.1",
+    "remark-gfm": "^4.0.1",
     "rsuite": "^5.41.0",
     "rxjs": "^7.8.1",
     "web-vitals": "^2.1.4"
@@ -49,5 +52,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^3.4.19"
   }
 }

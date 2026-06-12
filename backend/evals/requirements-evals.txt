@@ -1,0 +1,25 @@
+# Offline evaluation dependencies (RAGAS + Gemini judge).
+#
+# Install these in a SEPARATE virtualenv from the app — RAGAS and
+# langchain-google-genai pull in a newer langchain-core than the runtime pins,
+# so keeping them isolated avoids disturbing the served app.
+#
+#   python -m venv .venv-evals && source .venv-evals/bin/activate
+#   pip install -r evals/requirements-evals.txt
+#
+# Then run from the backend/ directory:
+#   python -m evals.ragas_tests --subset smoke
+
+ragas>=0.2.8,<0.3
+langchain-google-genai>=2.0.0,<3
+# RAGAS needs an embeddings + chat model; the google-genai SDK is already a
+# runtime dep, but pin it here too so the eval venv is self-contained.
+google-generativeai>=0.7.0
+# RAGAS uses HuggingFace datasets internally for some paths.
+datasets>=2.19.0
+
+# App modules the harness reuses (retrieval + synthesis) need these. They don't
+# conflict with the RAGAS/langchain stack above, so the eval venv stays clean.
+pinecone-client==3.2.2
+tenacity>=8.2.3
+pydantic-settings>=2.2.1

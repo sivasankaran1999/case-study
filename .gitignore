@@ -1,0 +1,37 @@
+# Secrets / env
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Generated scrape catalog (rebuilt by scrape_runner)
+backend/data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.venv*/
+backend/venv/
+backend/.venv/
+backend/.venv-evals/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / frontend
+node_modules/
+build/
+dist/
+coverage/
+.eslintcache
+
+# OS / editor
+.DS_Store
+*.log
+.idea/
+.vscode/
